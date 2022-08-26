@@ -2,17 +2,21 @@ import './App.css';
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import firebaseConfig from './firebase.config';
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from 'react';
 
 firebase.initializeApp(firebaseConfig);
 
 function App() {
+  const[newUser, setNewUser] = useState(false);
   const [user,setUser] = useState({
      isSignedIn: false,
      name: '', 
      email: '',
-     photo: ''
+     password: '',
+     photo: '',
+     error:'',
+     success: false
   });
   const provider = new GoogleAuthProvider();
 
@@ -43,20 +47,73 @@ function App() {
     const auth = getAuth();
     signOut(auth)
     .then(res => {
-       const signedOutUser = 
-      {isSignedIn: false,
+       const signedOutUser = {
+        isSignedIn: false,
         name:'',
         email: '',
         photo: ''
       };
       setUser(signedOutUser);
-      console.log(res);
     })
     .catch(err => {
 
     })
   }
-  
+
+  const handleBlur = (event) =>{
+    let isFieldValid = true;
+    if(event.target.name === 'email'){
+      isFieldValid = /\S+@\S+\.\S+/.test(event.target.value);//Regular Expression
+      }
+    if(event.target.name === 'password'){
+      const isPasswordValid = event.target.value.length > 6;
+      const passwordHasNumber = /\d{1}/.test(event.target.value);//Regular Expression
+      isFieldValid = isPasswordValid && passwordHasNumber;  
+    }
+    if(isFieldValid){
+      const newUserInfo = {...user};
+      newUserInfo[event.targe.name] = event.target.value;
+      setUser(newUserInfo);
+    }
+  }
+
+  const handleSubmit = (event) =>{
+     if(newUser && user.email && user.password){
+      const auth = getAuth();
+      createUserWithEmailAndPassword(auth, user.email, user.password)
+        .then(res => {
+          const newUserInfo = {...user};
+          newUserInfo.error = '';
+          newUserInfo.success = true;
+          setUser(newUserInfo);      
+        })
+        .catch(error => {
+          const newUserInfo = {...user};
+          newUserInfo.error = error.message;
+          newUserInfo.success = false;
+          setUser(newUserInfo);
+        });
+     }
+
+     if(!newUser && user.email && user.password){
+      const auth = getAuth();
+      signInWithEmailAndPassword(auth, user.email, user.password)
+        .then( res => {
+          const newUserInfo = {...user};
+          newUserInfo.error = '';
+          newUserInfo.success = true;
+          setUser(newUserInfo); 
+         })
+        .catch((error) => {
+          const newUserInfo = {...user};
+          newUserInfo.error = error.message;
+          newUserInfo.success = false;
+          setUser(newUserInfo);
+        });
+     }
+     event.preventDefault();
+  }
+
   return (
     <div className="App">
       {
@@ -70,7 +127,25 @@ function App() {
           <img src = {user.photo} alt=""></img>
         </div>
       }
-    </div>
+
+      <h1>Our Own Authentication System:</h1>
+      <input type = "Checkbox" onChange = {() => setNewUser(!newUser)}name="newUser" id=""/>
+      <label htmlFor = "newUser">New User Sign Up</label>
+      <br/><br/>
+      <form onSubmit = {handleSubmit}>
+      {newUser && <input type = "text" name="name"onBlur = {handleBlur} placeholder = "Enter your name" required/>}
+      <br/><br/>
+      <input type = "text" name="email" onBlur = {handleBlur} placeholder="Enter your email" required/>
+      <br/><br/>
+      <input type = "password" name="password" onBlur = {handleBlur} placeholder="Enter your password" required/>
+      <br/><br/>
+      <input type = "submit" value ="Submit"/> 
+      </form>
+      <p style  = {{color:'red'}}>{user.error}</p>
+      {
+        user.success && <p style  = {{color:'green'}}>User {newUser ? 'Created' : 'Logged In'} Successfully</p>    
+      }    
+     </div>
   );
 }
 
