@@ -2,7 +2,7 @@ import './App.css';
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import firebaseConfig from './firebase.config';
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, FacebookAuthProvider } from "firebase/auth";
 import { useState } from 'react';
 
 firebase.initializeApp(firebaseConfig);
@@ -19,6 +19,7 @@ function App() {
      success: false
   });
   const provider = new GoogleAuthProvider();
+  const fbProvider = new FacebookAuthProvider();
 
   //Sign In Function
   const handleSignIn = () => {
@@ -60,6 +61,20 @@ function App() {
     })
   }
 
+  const handleFbSignIn = () => {
+    const auth = getAuth();
+    signInWithPopup(auth, fbProvider)
+   .then((result) => {
+    // The signed-in user info.
+    const user = result.user;
+    console.log('fb user after sign in', user);
+    })
+
+   .catch((error) => {
+   
+  });
+}
+
   const handleBlur = (event) =>{
     let isFieldValid = true;
     if(event.target.name === 'email'){
@@ -72,7 +87,7 @@ function App() {
     }
     if(isFieldValid){
       const newUserInfo = {...user};
-      newUserInfo[event.targe.name] = event.target.value;
+      newUserInfo[event.target.name] = event.target.value;
       setUser(newUserInfo);
     }
   }
@@ -85,7 +100,9 @@ function App() {
           const newUserInfo = {...user};
           newUserInfo.error = '';
           newUserInfo.success = true;
-          setUser(newUserInfo);      
+          setUser(newUserInfo);
+          updateUserName(user.name);
+          console.log('sign in user info', res.user);      
         })
         .catch(error => {
           const newUserInfo = {...user};
@@ -114,12 +131,28 @@ function App() {
      event.preventDefault();
   }
 
+  const updateUserName = name =>{
+    const auth = getAuth();
+    updateProfile(auth.currentUser, {
+    displayName: name, 
+    })
+
+  .then(() => {
+      console.log('User Name Updated Successfully');
+  })
+  .catch((error) => {
+    console.log(error);
+  });
+}
+
   return (
     <div className="App">
       {
         user.isSignedIn ? <button onClick={handleSignOut}>Sign Out</button> :
         <button onClick={handleSignIn}>Sign In</button> // if, else condition in one line 
       }
+      <br/><br/>
+      <button onClick = {handleFbSignIn}>Sign In using facebook</button>
       {
         user.isSignedIn && <div>
           <p>Welcome, {user.name}</p>
@@ -139,7 +172,7 @@ function App() {
       <br/><br/>
       <input type = "password" name="password" onBlur = {handleBlur} placeholder="Enter your password" required/>
       <br/><br/>
-      <input type = "submit" value ="Submit"/> 
+      <input type = "submit" value = {newUser ? 'Sign Up' : 'Sign In'}/> 
       </form>
       <p style  = {{color:'red'}}>{user.error}</p>
       {
